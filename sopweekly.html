@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+    * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      overflow-x: hidden;
+      color: #222;
+    }
+
+    .leaf {
+      position: fixed;
+      top: -50px;
+      width: 40px;
+      height: 40px;
+      background: url('https://cdn-icons-png.flaticon.com/512/415/415733.png') center/contain no-repeat;
+      opacity: 0.6;
+      animation: fall linear infinite;
+      z-index: 0;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-10vh) rotate(0deg); }
+      100% { transform: translateY(110vh) rotate(360deg); }
+    }
+
+    .hero {
+      position: relative;
+      text-align: center;
+      color: white;
+      width: 100%;
+      padding: 60px 20px;
+      background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1350&q=80') center/cover no-repeat;
+      background-attachment: fixed;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+    }
+    .hero h1 {
+      position: relative;
+      font-size: 2.2em;
+      font-weight: 700;
+      z-index: 1;
+      margin: 0;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .container {
+      position: relative;
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      max-width: 1000px;
+      width: 95%;
+      margin: -40px auto 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      z-index: 2;
+      overflow-x: auto;
+    }
+
+    h2 { text-align: center; margin-bottom: 18px; color: #0077b6; }
+    label { font-weight: 600; margin-top: 10px; display: block; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      transition: 0.3s;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0077b6, #00b4d8);
+      color: white;
+      font-size: 1.05em;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #00b4d8, #0077b6);
+      transform: translateY(-2px);
+    }
+
+    .sop-heading {
+      margin-top: 18px;
+      font-weight: 700;
+      color: #0b5c86;
+      padding: 8px 6px;
+      border-left: 4px solid #0077b6;
+      background: #f7fcff;
+      border-radius: 6px;
+    }
+
+    .sop-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      padding: 8px 4px;
+      border-bottom: 1px solid #eee;
+      word-break: break-word;
+    }
+
+    .sop-item label { margin: 0; font-weight: 500; padding-right: 10px; }
+    .sop-item input[type="checkbox"] { margin-left: 10px; flex-shrink: 0; }
+
+    .controls { display: flex; gap: 10px; margin-top: 12px; }
+    .small-note { font-size: 0.9em; color: #555; margin-top: 6px; }
+    footer { color: white; text-align: center; padding: 10px; opacity: 0.9; margin-top: 20px; }
+    a { color: #0077b6; font-weight:600; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+
+<script>
+  for (let i = 0; i < 12; i++) {
+    const leaf = document.createElement('div');
+    leaf.className = 'leaf';
+    leaf.style.left = Math.random() * 100 + 'vw';
+    leaf.style.animationDuration = 10 + Math.random() * 10 + 's';
+    leaf.style.animationDelay = Math.random() * 10 + 's';
+    leaf.style.transform = `rotate(${Math.random() * 360}deg)`;
+    document.body.appendChild(leaf);
+  }
+</script>
+
+<div class="hero">
+  <img src="images/infinity.png" alt="Infinite Nature Logo" style="max-height:60px; display:block; margin:0 auto 10px;" />
+  <h1>SOP Checklist – Iinfinity Nature Hotel</h1>
+</div>
+
+<div class="container">
+  <h2>SOP Checklist - WEEKLY </h2>
+
+  <label for="sopDate">Select Date</label>
+  <input type="date" id="sopDate">
+
+  <button id="translateBtn" style="background:#00b894;">🔄 Translate to English</button>
+
+  <div id="sopContainer" style="margin-top:10px;"></div>
+
+  <div class="controls">
+    <button id="saveBtn">Save Checklist</button>
+  </div>
+
+  <div id="sopMessage" style="display:none; margin-top:12px; text-align:center; color:green; font-weight:600;">
+    ✅ SOP saved successfully.
+  </div>
+
+  <div style="margin-top:12px;" class="small-note">
+    <a href="index.html">← Back to Expenses</a>
+  </div>
+</div>
+
+<footer>
+  © 2025 Iinfinity Nature Hotel - Kodaikanal <br>
+  <a href="https://www.iinfinitynature.com/" target="_blank" style="color:white; margin:0 10px; text-decoration:underline;">
+    www.iinfinitynature.com
+  </a>
+</footer>
+
+<script>
+const firebaseConfig = {
+apiKey: "AIzaSyBS9CW3cnvD8-gN08qWtE9uF3qEDqfixmw",
+  authDomain: "iinfinitysop.firebaseapp.com",
+  databaseURL: "https://iinfinitysop-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "iinfinitysop",
+  storageBucket: "iinfinitysop.firebasestorage.app",
+  messagingSenderId: "21802379487",
+  appId: "1:21802379487:web:041c79f8ae0a1f5c50616a",
+  measurementId: "G-WL5TCJ100Y"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Placeholder weekly SOP items
+const SOP_TAMIL = [
+
+  {row: 4, serial:"19.0", text:"வீட்டு பரப்பை வாரத்தில் மூன்று முறை மேலிருந்து கீழ் வரை சுத்தம் செய்யவும்."},
+  {row: 5, serial:"20.0", text:"மரம், செடிகள் மற்றும் காய்கறிகளை பராமரிக்கவும் – கீரைகள் அகற்றவும், கம்போஸ்ட் பயன்படுத்தவும்."},
+  {row: 6, serial:"21.0", text:"மேல் கூரை வாரத்தில் மூன்று முறை சுத்தம் செய்யவும்; கோணங்கள் தூசி செய்யவும் மற்றும் தரை துடைக்கவும்."},
+  {row: 7, serial:"22.0", text:"அனைத்து கதவு மேட்ராஸ் கழுவவும்."},
+  {row: 8, serial:"23.0", text:"கதவுகள், ஜன்னல்கள், கண்ணாடி, விசிறிகள், மேசைகள் மற்றும் யூனிட் உள்ளமைப்புகளை ஆழமாக சுத்தம் செய்யவும்."},
+  {row: 9, serial:"25.0", text:"யூனிட்களை பராமரிப்பு தேவை அல்லது பழுது பார்வை செய்யவும்."},
+  {row: 10, serial:"26.0", text:"கேம்ப்ஃபயர் க்கான வறண்ட மரங்கள் தயாராக இருக்குமாறு வைக்கவும்."},
+  {row: 11, serial:"27.0", text:"பார்பிகியூ க்கான சார்கோல் பராமரிக்கவும்."},
+  {row: 12, serial:"28.0", text:"கண்ணாடி, ஜக்குகள், கிளாஸ் அனைத்தையும் உலர்ந்த சுத்தப் ப்ரஷ் மற்றும் சோப்பால் சுத்தம் செய்யவும்."},
+  {row: 13, serial:"29.0", text:"அனைத்து சுத்தப்படுத்தும் துணிகளை மெஷினில் கழுவி, பட்டியலை பராமரிக்கவும்."},
+  {row: 14, serial:"30.0", text:"அனைத்து யூனிட்களின் படுக்கை மற்றும் சுவரின் நிலையை காட்டும் தெளிவான வீடியோக்களை அனுப்பவும்."},
+  {row: 15, serial:"31.0", text:"உடை உலர்த்தும் போது நேரடியாக சூரிய ஒளியில் வைக்கவும்; மெஷினில் தண்ணீர் இருக்கும் போது விடாதீர்கள்."},
+  {row: 16, serial:"32.0", text:"மெத்திரஸ் மூடுகளை முழுமையாக உலர்ந்த பிறகு சேமிக்கவும்."},
+  {row: 17, serial:"33.0", text:"உள்ளடக்க மதங்களை கை கழுவவும்."},
+  {row: 18, serial:"34.0", text:"உள்ளமைந்த தாவரங்களுக்கு வாரத்திற்கு இரண்டு முறை தண்ணீர் வழங்கவும்."},
+  {row: 19, serial:"35.0", text:"அனைத்து அலங்கார மற்றும் மெழுகுவர்த்தி டின்னர் பொருட்களை சரிபார்க்கவும்."},
+  {row: 20, serial:"36.0", text:"ஏதேனும் பழுது அல்லது பராமரிப்பு தேவை இருப்பின் உடனடியாக புகார் செய்யவும்."},
+  {row: 21, serial:"37.0", text:"கோழி (லட்சுமி)க்கு வாரத்திற்கு இரண்டு முறை நீராட செய்யவும்."},
+  {row: 22, serial:"38.0", text:"சமையலறையை ஆழமாக சுத்தம் செய்யவும், ஒவ்வொரு 10 நாட்களும்."},
+  {row: 23, serial:"39.0", text:"பிரதி பாகங்கள் மற்றும் கருவிகள் பட்டியலை பராமரிக்கவும்; கடனில் விடாதீர்கள்."}
+
+];
+
+const SOP_ENGLISH = [
+ 
+    {row: 4, serial:"19.0", text:"Clean premises from top to bottom thrice a week."},
+    {row: 5, serial:"20.0", text:"Maintain trees, plants, and vegetables – remove weeds, apply compost."},
+    {row: 6, serial:"21.0", text:"Clean top shed thrice weekly; dust furniture and mop floor."},
+    {row: 7, serial:"22.0", text:"Wash all door mats."},
+    {row: 8, serial:"23.0", text:"Deep clean doors, windows, glass, fans, tables, and unit interiors."},
+    {row: 9, serial:"25.0", text:"Inspect units for repairs or maintenance needs."},
+    {row: 10, serial:"26.0", text:"Keep dry firewood ready for campfire."},
+    {row: 11, serial:"27.0", text:"Maintain charcoal for barbecue."},
+    {row: 12, serial:"28.0", text:"Clean bottles, jugs, glasses well with brush and soap."},
+    {row: 13, serial:"29.0", text:"Wash all cleaning cloths in washing machine and maintain stock list."},
+    {row: 14, serial:"30.0", text:"Send clear videos of each unit showing condition of beds and walls."},
+    {row: 15, serial:"31.0", text:"Wash and dry clothes in sunlight; do not leave wet in machine overnight."},
+    {row: 16, serial:"32.0", text:"Store mattress covers only after fully dried."},
+    {row: 17, serial:"33.0", text:"Hand wash all indoor mats."},
+    {row: 18, serial:"34.0", text:"Water indoor plants twice a week."},
+    {row: 19, serial:"35.0", text:"Check all decorative and candlelight dinner items."},
+    {row: 20, serial:"36.0", text:"Report any repair or maintenance requirements immediately."},
+    {row: 21, serial:"37.0", text:"Give cow (Lakshmi) water bath twice a week."},
+    {row: 22, serial:"38.0", text:"Deep clean kitchen once every 10 days."},
+    {row: 23, serial:"39.0", text:"Maintain list of spare parts and tools; do not lend them out."}
+];
+
+let SOP_ITEMS = [...SOP_TAMIL];
+let isEnglish = false;
+
+const sopContainer = document.getElementById('sopContainer');
+const dateInput = document.getElementById('sopDate');
+const saveBtn = document.getElementById('saveBtn');
+const sopMessage = document.getElementById('sopMessage');
+const translateBtn = document.getElementById('translateBtn');
+
+function renderItems(checkedSet = new Set()){
+  sopContainer.innerHTML = '';
+  SOP_ITEMS.forEach(it => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'sop-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'sop_cb_' + it.row;
+    if(checkedSet.has(String(it.row))) cb.checked = true;
+
+    const lbl = document.createElement('label');
+    lbl.htmlFor = cb.id;
+    lbl.innerHTML = `<strong>${it.serial}</strong> ${it.text}`;
+    wrapper.appendChild(lbl);
+    wrapper.appendChild(cb);
+    sopContainer.appendChild(wrapper);
+  });
+}
+
+async function loadChecklistForDate(dateStr){
+  sopMessage.style.display = 'none';
+  if(!dateStr){ renderItems(new Set()); return; }
+  try {
+    const snapshot = await db.ref('weekly_sop/' + dateStr + '/checked_items').once('value');
+    const value = snapshot.val();
+    const checkedSet = new Set();
+    if(Array.isArray(value)){
+      value.forEach(v => { if(v && v.row) checkedSet.add(String(v.row)); });
+    } else if(value && typeof value === 'object'){
+      Object.values(value).forEach(v => { if(v && v.row) checkedSet.add(String(v.row)); });
+    }
+    renderItems(checkedSet);
+  } catch(err){
+    console.error('Error loading checklist:', err);
+    renderItems(new Set());
+  }
+}
+
+async function saveChecklistForDate(dateStr){
+  if(!dateStr){ alert('Please select a date first.'); return; }
+  const checked = [];
+  SOP_ITEMS.forEach(it => {
+    const cb = document.getElementById('sop_cb_' + it.row);
+    if(cb && cb.checked){ checked.push({ row: it.row, serial: it.serial, text: it.text }); }
+  });
+  try {
+    await db.ref('weekly_sop/' + dateStr + '/checked_items').set(checked);
+    await db.ref('weekly_sop/' + dateStr + '/meta').set({ saved_at: new Date().toISOString() });
+    sopMessage.style.display = 'block';
+    setTimeout(()=> sopMessage.style.display = 'none', 3000);
+  } catch(err){
+    console.error('Error saving checklist:', err);
+    alert('Error saving SOP: ' + (err.message || err));
+  }
+}
+
+dateInput.addEventListener('change', e => loadChecklistForDate(e.target.value));
+saveBtn.addEventListener('click', () => saveChecklistForDate(dateInput.value));
+
+translateBtn.addEventListener('click', ()=> {
+  isEnglish = !isEnglish;
+  SOP_ITEMS = isEnglish ? [...SOP_ENGLISH] : [...SOP_TAMIL];
+  translateBtn.textContent = isEnglish ? "🔙 Back to Tamil" : "🔄 Translate to English";
+  loadChecklistForDate(dateInput.value);
+});
+
+window.addEventListener('load', () => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const dd = String(today.getDate()).padStart(2,'0');
+  dateInput.value = `${yyyy}-${mm}-${dd}`;
+  loadChecklistForDate(dateInput.value);
+});
+</script>
+
+</body>
+</html>

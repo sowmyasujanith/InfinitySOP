@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOP Admin Dashboard – Iinfinity Nature Hotel</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+*{box-sizing:border-box;font-family:'Poppins',sans-serif}
+
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: #222;
+}
+
+/* Login Overlay */
+#loginOverlay{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.7);
+  display:flex;justify-content:center;align-items:center;
+  z-index:999;
+}
+#loginBox{
+  background:white;padding:40px 30px;border-radius:15px;
+  text-align:center;box-shadow:0 8px 25px rgba(0,0,0,0.3);
+  width:320px;
+}
+#loginBox input{
+  width:100%;padding:10px;border-radius:8px;
+  border:1px solid #ccc;margin:10px 0;font-size:1em;
+}
+#loginError{color:red;font-size:0.9em;margin-top:8px;display:none;}
+
+/* Header */
+header {
+  background: #004d40;
+  color: white;
+  text-align: center;
+  padding: 15px;
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 30px auto;
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  display:none;
+}
+
+h2 {
+  text-align: center;
+  color: #004d40;
+}
+
+.filter-section {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+input[type="date"] {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+button {
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button:hover {
+  background: linear-gradient(135deg, #00b4d8, #0077b6);
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tab {
+  padding: 10px 20px;
+  margin: 0 5px;
+  border-radius: 6px;
+  background: #e0f2f1;
+  color: #004d40;
+  cursor: pointer;
+  font-weight: 600;
+}
+.tab.active {
+  background: #004d40;
+  color: white;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+th, td {
+  border: 1px solid #ccc;
+  text-align: left;
+  padding: 8px;
+}
+th {
+  background: #0077b6;
+  color: white;
+}
+tr:nth-child(even) {
+  background: #f8f8f8;
+}
+
+.export-btn {
+  margin-top: 15px;
+  background: #28a745;
+}
+
+footer {
+  text-align: center;
+  color: white;
+  padding: 10px;
+  margin-top: 20px;
+}
+</style>
+</head>
+<body>
+
+<!-- Login Overlay -->
+<div id="loginOverlay">
+  <div id="loginBox">
+    <h2>Admin Login</h2>
+    <input type="password" id="adminPassword" placeholder="Enter password">
+    <button onclick="checkLogin()">Login</button>
+    <div id="loginError">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<header>SOP Admin Dashboard – Iinfinity Nature Hotel</header>
+
+<div class="container" id="dashboardContainer">
+  <h2>View Unticked SOP Records</h2>
+  <div class="filter-section">
+    <label>From: <input type="date" id="fromDate"></label>
+    <label>To: <input type="date" id="toDate"></label>
+    <button id="loadBtn">Load Records</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-type="daily">Daily</div>
+    <div class="tab" data-type="weekly">Weekly</div>
+    <div class="tab" data-type="monthly">Monthly</div>
+    <div class="tab" id="translateBtn">🌐 Translate</div>
+  </div>
+
+  <table id="recordsTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Serial</th>
+        <th>Task</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <button id="exportBtn" class="export-btn">Export to CSV</button>
+  <button id="exportExcelBtn" class="export-btn" style="display:none;">Export to Excel</button>
+</div>
+
+<footer>
+  © 2025 Iinfinity Nature Hotel – Kodaikanal <br>
+  <a href="index.html" style="color:white;text-decoration:underline;">← Back to Expenses</a>
+</footer>
+
+<script>
+const ADMIN_PASSWORD = "nature@admin";
+function checkLogin(){
+  const entered = document.getElementById("adminPassword").value.trim();
+  const error = document.getElementById("loginError");
+  if (entered === ADMIN_PASSWORD){
+    document.getElementById("loginOverlay").style.display = "none";
+    document.getElementById("dashboardContainer").style.display = "block";
+    error.style.display = "none";
+  } else {
+    error.style.display = "block";
+  }
+}
+
+// Firebase Initialization
+const firebaseConfig = {
+  apiKey: "AIzaSyBS9CW3cnvD8-gN08qWtE9uF3qEDqfixmw",
+  authDomain: "iinfinitysop.firebaseapp.com",
+  databaseURL: "https://iinfinitysop-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "iinfinitysop",
+  storageBucket: "iinfinitysop.firebasestorage.app",
+  messagingSenderId: "21802379487",
+  appId: "1:21802379487:web:041c79f8ae0a1f5c50616a",
+  measurementId: "G-WL5TCJ100Y"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ✅ FIXED: initialized properly
+
+let DAILY_SOP = [
+  {serial:"1.0", text:"அன்றாட பூஜை தவறாமல் செய்யவும்."},
+  {serial:"2.0", text:"மாலை முன்பு தண்ணீர் தொட்டி நிரப்பவும்."},
+  {serial:"3.0", text:"குளம் மோட்டார் 2 மணி நேரம் இயக்கி தண்ணீர் நிலை சரிபார்க்கவும்."},
+  {serial:"4.0", text:"லட்சுமியை மேய்ச்சிக்காக அனுப்பி, அவளது பரப்பையும் சுத்தமாக வைக்கவும்."},
+  {serial:"5.0", text:"மாலை லட்சுமியை திருப்பி கொண்டு வந்து போதுமான தண்ணீர் வழங்கவும்."},
+  {serial:"6.0", text:"கோழி பரப்பை சுத்தம் செய்து, அவர்களுக்கு உணவு கொடுக்கவும்."},
+  {serial:"7.0", text:"அனைத்து யூனிட்களில் காலையில் ஜன்னல்கள் திறந்து காற்றோட்டம் ஏற்படுத்தவும்."},
+  {serial:"8.0", text:"அடுக்கு சமையலறை பொருட்கள் மற்றும் பெட்டிகளை சரிபார்க்கவும்."},
+  {serial:"9.0", text:"UPS சார்ஜ் மற்றும் தண்ணீர் நிலையை சரிபார்க்கவும்."},
+  {serial:"10.0", text:"ஜெனரேட்டரில் எப்போதும் போதுமான பெட்ரோல் இருக்குமாறு வைத்திருக்கவும்."},
+  {serial:"11.0", text:"மஞ்சள் மெத்தை, தலையணை மூடுகள், பஞ்சு மற்றும் துணிகளை கழுவவும்."},
+  {serial:"12.0", text:"ஏதேனும் சேதமடைந்த பொருட்களைச் சரி செய்து புகாரளிக்கவும்."},
+  {serial:"13.0", text:"குழப்பமில்லாமல் உணவு கழிவுகளை நாகராஜன் பகுதியிலுள்ள கம்போஸ்ட் சித்திரத்தில் இடவும்."},
+  {serial:"14.0", text:"வெளிப்புற நபர்களை அனுமதிக்காதீர்கள்; யாராவது வந்தால் தகவல் தரவும்."},
+  {serial:"15.0", text:"கழிப்பறைகளை தினசரி சுத்தம் செய்யவும் மற்றும் உமிழ்வுகளை சரிபார்க்கவும்."},
+  {serial:"16.0", text:"மால்னம் பெட்டிகளை காலி செய்யவும் மற்றும் சுற்றுப்புறத்தை சுத்தமாக வைத்திருங்கள்."},
+  {serial:"17.0", text:"கலங்காமல் வைக்க, நாகராஜன் பகுதியை அருகிலேயே உடைகள் உலர்த்தவும்."},
+  {serial:"18.0", text:"கண்ணாடி, கிளாஸ், ஜக்குகள், கேட்டில் போன்றவற்றை சுத்தம் செய்து விருந்தினர்களுக்குத் தயார் வைக்கவும்."}
+];
+
+let WEEKLY_SOP = [
+  {serial:"19.0", text:"வீட்டு பரப்பை வாரத்தில் மூன்று முறை மேலிருந்து கீழ் வரை சுத்தம் செய்யவும்."},
+  {serial:"20.0", text:"மரம், செடிகள் மற்றும் காய்கறிகளை பராமரிக்கவும் – கீரைகள் அகற்றவும், கம்போஸ்ட் பயன்படுத்தவும்."},
+  {serial:"21.0", text:"மேல் கூரை வாரத்தில் மூன்று முறை சுத்தம் செய்யவும்; கோணங்கள் தூசி செய்யவும் மற்றும் தரை துடைக்கவும்."},
+  {serial:"22.0", text:"அனைத்து கதவு மேட்ராஸ் கழுவவும்."},
+  {serial:"23.0", text:"கதவுகள், ஜன்னல்கள், கண்ணாடி, விசிறிகள், மேசைகள் மற்றும் யூனிட் உள்ளமைப்புகளை ஆழமாக சுத்தம் செய்யவும்."},
+  {serial:"25.0", text:"யூனிட்களை பராமரிப்பு தேவை அல்லது பழுது பார்வை செய்யவும்."},
+  {serial:"26.0", text:"கேம்ப்ஃபயர் க்கான வறண்ட மரங்கள் தயாராக இருக்குமாறு வைக்கவும்."},
+  {serial:"27.0", text:"பார்பிகியூ க்கான சார்கோல் பராமரிக்கவும்."},
+  {serial:"28.0", text:"கண்ணாடி, ஜக்குகள், கிளாஸ் அனைத்தையும் உலர்ந்த சுத்தப் ப்ரஷ் மற்றும் சோப்பால் சுத்தம் செய்யவும்."},
+  {serial:"29.0", text:"அனைத்து சுத்தப்படுத்தும் துணிகளை மெஷினில் கழுவி, பட்டியலை பராமரிக்கவும்."},
+  {serial:"30.0", text:"அனைத்து யூனிட்களின் படுக்கை மற்றும் சுவரின் நிலையை காட்டும் தெளிவான வீடியோக்களை அனுப்பவும்."},
+  {serial:"31.0", text:"உடை உலர்த்தும் போது நேரடியாக சூரிய ஒளியில் வைக்கவும்; மெஷினில் தண்ணீர் இருக்கும் போது விடாதீர்கள்."},
+  {serial:"32.0", text:"மெத்திரஸ் மூடுகளை முழுமையாக உலர்ந்த பிறகு சேமிக்கவும்."},
+  {serial:"33.0", text:"உள்ளடக்க மதங்களை கை கழுவவும்."},
+  {serial:"34.0", text:"உள்ளமைந்த தாவரங்களுக்கு வாரத்திற்கு இரண்டு முறை தண்ணீர் வழங்கவும்."},
+  {serial:"35.0", text:"அனைத்து அலங்கார மற்றும் மெழுகுவர்த்தி டின்னர் பொருட்களை சரிபார்க்கவும்."},
+  {serial:"36.0", text:"ஏதேனும் பழுது அல்லது பராமரிப்பு தேவை இருப்பின் உடனடியாக புகார் செய்யவும்."},
+  {serial:"37.0", text:"கோழி (லட்சுமி)க்கு வாரத்திற்கு இரண்டு முறை நீராட செய்யவும்."},
+  {serial:"38.0", text:"சமையலறையை ஆழமாக சுத்தம் செய்யவும், ஒவ்வொரு 10 நாட்களும்."},
+  {serial:"39.0", text:"பிரதி பாகங்கள் மற்றும் கருவிகள் பட்டியலை பராமரிக்கவும்; கடனில் விடாதீர்கள்."}
+];
+
+let MONTHLY_SOP = [
+  {serial:"40.0", text:"சோபா குஷன் மூடிகளை மாதத்தில் ஒருமுறை கழுவி உலர்ந்த பிறகு மாற்றவும்."},
+  {serial:"41.0", text:"அனைத்து படுக்கை துணிகள், சமையல் பாத்திரங்கள், தலையணை, போர்வைகள், விளையாட்டுப் பொருட்களை எண்ணவும்."},
+  {serial:"42.0", text:"அனைத்து பொருட்களை சரிபார்த்து பதிவு புத்தகத்தில் இடவும்."},
+  {serial:"43.0", text:"சேதமடைந்த அல்லது மாசுபட்ட மெத்திரஸ் மூடிகளை புகைப்படம் எடுத்து அகற்றவும்."},
+  {serial:"44.0", text:"டிவி பாக்கேஜை ரீசார்ஜ் செய்யவும்."}
+];
+
+const originalSOP = {
+  daily: JSON.parse(JSON.stringify(DAILY_SOP)),
+  weekly: JSON.parse(JSON.stringify(WEEKLY_SOP)),
+  monthly: JSON.parse(JSON.stringify(MONTHLY_SOP))
+};
+
+// English translation dataset (kept same)
+const ENGLISH_SOP = {
+  daily: [
+    {serial:"1.0",text:"Perform daily pooja without fail."},
+    {serial:"2.0",text:"Fill the water tank before evening."},
+    {serial:"3.0",text:"Run the pond motor for 2 hours daily and check water level."},
+    {serial:"4.0",text:"Send Lakshmi (cow) to graze and keep her area clean."},
+    {serial:"5.0",text:"Bring Lakshmi back in the evening and provide enough water."},
+    {serial:"6.0",text:"Clean the hen area and feed them."},
+    {serial:"7.0",text:"Open windows in all units in the morning for ventilation."},
+    {serial:"8.0",text:"Check kitchen items and boxes."},
+    {serial:"9.0",text:"Check UPS charge and water level."},
+    {serial:"10.0",text:"Keep sufficient petrol in generator always."},
+    {serial:"11.0",text:"Wash bed covers, pillow covers, blankets, and towels."},
+    {serial:"12.0",text:"Report and fix any damaged mattress covers or items."},
+    {serial:"13.0",text:"Dispose food waste (not plastic) in compost pit near Nagarajan's area."},
+    {serial:"14.0",text:"Do not allow outsiders into premises; report if anyone comes."},
+    {serial:"15.0",text:"Clean bathrooms daily and check for leaks."},
+    {serial:"16.0",text:"Empty garbage bins and keep surroundings clean."},
+    {serial:"17.0",text:"Dry clothes near Nagarajan’s area, not visible from property."},
+    {serial:"18.0",text:"Clean bottles, glasses, jugs, kettles and keep ready for guests."}
+  ],
+  weekly: [
+    {serial:"19.0",text:"Clean premises from top to bottom thrice a week."},
+    {serial:"20.0",text:"Maintain trees, plants, and vegetables – remove weeds, apply compost."},
+    {serial:"21.0",text:"Clean top shed thrice weekly; dust furniture and mop floor."},
+    {serial:"22.0",text:"Wash all door mats."},
+    {serial:"23.0",text:"Deep clean doors, windows, glass, fans, tables, and unit interiors."},
+    {serial:"25.0",text:"Inspect units for repairs or maintenance needs."},
+    {serial:"26.0",text:"Keep dry firewood ready for campfire."},
+    {serial:"27.0",text:"Maintain charcoal for barbecue."},
+    {serial:"28.0",text:"Clean bottles, jugs, glasses well with brush and soap."},
+    {serial:"29.0",text:"Wash all cleaning cloths in washing machine and maintain stock list."},
+    {serial:"30.0",text:"Send clear videos of each unit showing condition of beds and walls."},
+    {serial:"31.0",text:"Wash and dry clothes in sunlight; do not leave wet in machine overnight."},
+    {serial:"32.0",text:"Store mattress covers only after fully dried."},
+    {serial:"33.0",text:"Hand wash all indoor mats."},
+    {serial:"34.0",text:"Water indoor plants twice a week."},
+    {serial:"35.0",text:"Check all decorative and candlelight dinner items."},
+    {serial:"36.0",text:"Report any repair or maintenance requirements immediately."},
+    {serial:"37.0",text:"Give cow (Lakshmi) water bath twice a week."},
+    {serial:"38.0",text:"Deep clean kitchen once every 10 days."},
+    {serial:"39.0",text:"Maintain list of spare parts and tools; do not lend them out."}
+  ],
+  monthly: [
+    {serial:"40.0",text:"Wash sofa cushion covers monthly and replace after drying."},
+    {serial:"41.0",text:"Count all bed sheets, kitchen dishes, pillows, blankets, games, etc."},
+    {serial:"42.0",text:"Take stock of all items and record in register."},
+    {serial:"43.0",text:"Remove damaged or stained mattress covers after photographing."},
+    {serial:"44.0",text:"Recharge TV package."}
+  ]
+};
+
+const loadBtn = document.getElementById("loadBtn");
+const fromDate = document.getElementById("fromDate");
+const toDate = document.getElementById("toDate");
+const tableBody = document.querySelector("#recordsTable tbody");
+const tabs = document.querySelectorAll(".tab");
+let currentType = "daily";
+let isTranslated = false;
+
+// Load SOP data
+loadBtn.addEventListener("click", async () => {
+  tableBody.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
+  if (!fromDate.value || !toDate.value) {
+    alert("Please select date range.");
+    return;
+  }
+  const start = new Date(fromDate.value);
+  const end = new Date(toDate.value);
+
+  const [dailySnap, weeklySnap, monthlySnap] = await Promise.all([
+    db.ref("daily_sop").get(),
+    db.ref("weekly_sop").get(),
+    db.ref("monthly_sop").get()
+  ]);
+
+  const allData = {
+    daily_sop: dailySnap.val() || {},
+    weekly_sop: weeklySnap.val() || {},
+    monthly_sop: monthlySnap.val() || {}
+  };
+
+  const combinedRecords = [];
+  for (const [type, data] of Object.entries(allData)) {
+    Object.entries(data).forEach(([date, record]) => {
+      const d = new Date(date);
+      if (d >= start && d <= end) {
+        combinedRecords.push({ date, type, checked_items: record.checked_items || [] });
+      }
+    });
+  }
+
+  renderTable(combinedRecords);
+});
+
+// Render table
+function renderTable(records) {
+  tableBody.innerHTML = "";
+  const master = currentType === "daily" ? DAILY_SOP :
+                  currentType === "weekly" ? WEEKLY_SOP : MONTHLY_SOP;
+
+  records.forEach(record => {
+    if (record.type.replace("_sop","") === currentType) {
+      const checkedSerials = (record.checked_items || []).map(i => i.serial);
+      const unticked = master.filter(item => !checkedSerials.includes(item.serial));
+      unticked.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${record.date}</td>
+          <td>${item.serial || ""}</td>
+          <td>${item.text}</td>
+          <td>❌ Pending</td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+  });
+
+  if (!tableBody.innerHTML.trim()) {
+    tableBody.innerHTML = "<tr><td colspan='4'>No unticked records found.</td></tr>";
+  }
+}
+
+// Tab switching
+tabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    if (tab.id === "translateBtn") return;
+    tabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentType = tab.dataset.type;
+    loadBtn.click();
+  });
+});
+
+// Translate toggle
+document.getElementById("translateBtn").addEventListener("click", () => {
+  if (!isTranslated) {
+    DAILY_SOP = ENGLISH_SOP.daily;
+    WEEKLY_SOP = ENGLISH_SOP.weekly;
+    MONTHLY_SOP = ENGLISH_SOP.monthly;
+    document.getElementById("translateBtn").textContent = "🔙 Back to Tamil";
+    document.getElementById("exportExcelBtn").style.display = "inline-block";
+    isTranslated = true;
+  } else {
+    DAILY_SOP = originalSOP.daily;
+    WEEKLY_SOP = originalSOP.weekly;
+    MONTHLY_SOP = originalSOP.monthly;
+    document.getElementById("translateBtn").textContent = "🌐 Translate";
+    document.getElementById("exportExcelBtn").style.display = "none";
+    isTranslated = false;
+  }
+  loadBtn.click();
+});
+
+// Export CSV
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const rows = [["Date", "Serial", "Task", "Status"]];
+  document.querySelectorAll("#recordsTable tbody tr").forEach(tr => {
+    const cols = Array.from(tr.children).map(td => td.textContent.trim());
+    rows.push(cols);
+  });
+  let csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "Unticked_SOP_Report.csv";
+  a.click();
+});
+
+// Export Excel
+document.getElementById("exportExcelBtn").addEventListener("click", () => {
+  const rows = [["Date","Serial","Task","Status"]];
+  document.querySelectorAll("#recordsTable tbody tr").forEach(tr=>{
+    rows.push(Array.from(tr.children).map(td=>td.textContent.trim()));
+  });
+  let csv = rows.map(r=>r.join("\t")).join("\n");
+  const blob = new Blob([csv],{type:"application/vnd.ms-excel"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="Unticked_SOP_Report.xls";
+  a.click();
+});
+</script>
+</body>
+</html>
