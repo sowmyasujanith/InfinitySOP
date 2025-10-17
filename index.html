@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+    * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      color: #222;
+    }
+
+    .leaf {
+      position: fixed;
+      top: -50px;
+      width: 40px;
+      height: 40px;
+      background: url('https://cdn-icons-png.flaticon.com/512/415/415733.png') center/contain no-repeat;
+      opacity: 0.6;
+      animation: fall linear infinite;
+      z-index: 0;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-10vh) rotate(0deg); }
+      100% { transform: translateY(110vh) rotate(360deg); }
+    }
+
+    .hero {
+      position: relative;
+      text-align: center;
+      color: white;
+      width: 100%;
+      padding: 80px 20px;
+      background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1350&q=80') center/cover no-repeat;
+      background-attachment: fixed;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+    }
+    .hero h1 {
+      position: relative;
+      font-size: 3em;
+      font-weight: 700;
+      z-index: 1;
+      margin: 0;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .container {
+      position: relative;
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 900px;
+      width: 95%;
+      margin: -50px auto 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      z-index: 2;
+      overflow-x: auto;
+    }
+
+    h2 { text-align: center; margin-bottom: 20px; color: #0077b6; }
+    label { font-weight: 600; margin-top: 10px; display: block; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      transition: 0.3s;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0077b6, #00b4d8);
+      color: white;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #00b4d8, #0077b6);
+      transform: translateY(-2px);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 8px; text-align: center; }
+    th { background: #0077b6; color: white; }
+
+    footer { color: white; text-align: center; padding: 10px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+<script>
+  for (let i = 0; i < 12; i++) {
+    const leaf = document.createElement('div');
+    leaf.className = 'leaf';
+    leaf.style.left = Math.random() * 100 + 'vw';
+    leaf.style.animationDuration = 10 + Math.random() * 10 + 's';
+    leaf.style.animationDelay = Math.random() * 10 + 's';
+    leaf.style.transform = `rotate(${Math.random() * 360}deg)`;
+    document.body.appendChild(leaf);
+  }
+</script>
+
+<div class="hero"> 
+ <img src="images/infinity.png" alt="Infinite Nature Logo" />    
+ <h1>Iinfinity Nature Hotel - Expenses Recording</h1>
+</div>
+
+<div class="container">
+  <h2>Daily Expenses Form</h2>
+  <form id="expensesForm">
+    <label>Date</label>
+    <input type="date" id="date" required>
+
+    <label>Customer Name</label>
+    <input type="text" id="customer" required>
+
+    <label>Customer Phone Number</label>
+    <input type="tel" id="phone" required>
+
+    <label>Villa Type</label>
+    <input type="text" id="villa">
+
+    <label>Source</label>
+    <input type="text" id="source">
+
+    <label>People</label>
+    <input type="number" id="people" min="1" value="1">
+
+    <label>Advance</label>
+    <input type="number" id="advance" min="0">
+
+    <label>Banu Akka</label>
+    <input type="number" id="banuakka" min="0">
+
+    <label>Hotel2</label>
+    <input type="number" id="hotel2" min="0">
+
+    <label>Adi Hotel</label>
+    <input type="number" id="adihotel" min="0">
+
+    <label>Grocery</label>
+    <input type="number" id="grocery" min="0">
+
+    <label>Commission</label>
+    <input type="number" id="commission" min="0">
+
+    <label>Other Expenses</label>
+    <input type="number" id="otherexpenses" min="0">
+
+    <button type="submit">Submit Expense</button>
+  </form>
+
+  <div id="successMessage" style="display:none; text-align:center; margin-top:20px; color:green; font-weight:600;">
+    ✅ Expense has been recorded.
+  </div>
+
+
+</div>
+
+<footer>
+  © 2025 Iinfinity Nature Hotel - Kodaikanal <br>
+  <a href="https://www.iinfinitynature.com/" target="_blank" style="color:white; margin:0 10px; text-decoration:underline;">
+    www.iinfinitynature.com
+  </a>
+</footer>
+
+
+<p style="text-align:center; margin-top:20px;">
+  <a href="adminexpenses.html" style="color:#fff; text-decoration;">Admin Login Expenses</a>
+</p>
+
+<p style="text-align:center; margin-top:20px;">
+  <a href="adminsopnotticked.html" style="color:#fff; text-decoration;">SOP Not Completed</a>
+</p>
+
+<p style="text-align:center; margin-top:20px;">
+  <a href="adminsop.html" style="color:#fff; text-decoration;">SOP Completed</a>
+</p>
+
+
+<p style="text-align:center; margin-top:20px;">
+  <a href="sopdaily.html" style="color:#fff; text-decoration:underline;">SOP DAILY</a>
+</p>
+
+<p style="text-align:center; margin-top:20px;">
+  <a href="sopweekly.html" style="color:#fff; text-decoration:underline;">SOP WEEKLY</a>
+</p>
+
+<p style="text-align:center; margin-top:20px;">
+  <a href="sopmonthly.html" style="color:#fff; text-decoration:underline;">SOP MONTHLY</a>
+</p>
+
+
+
+<script>
+  const firebaseConfig = {
+   apiKey: "AIzaSyCKbpE6RtuvgLttHvHdbVxZgtFefGyPPys",
+  authDomain: "iinfinity-expenses.firebaseapp.com",
+  databaseURL: "https://iinfinity-expenses-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "iinfinity-expenses",
+  storageBucket: "iinfinity-expenses.firebasestorage.app",
+  messagingSenderId: "552799178905",
+  appId: "1:552799178905:web:c7480d32d867c75c36e808",
+  measurementId: "G-DKTJW4PQTV"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const form = document.getElementById("expensesForm");
+  const tableBody = document.querySelector("#expensesTable tbody");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const getVal = id => document.getElementById(id)?.value?.trim() || "";
+    const expenseData = {
+      date: getVal("date"),
+      customer: getVal("customer"),
+      phone: getVal("phone"),
+      villa: getVal("villa"),
+      source: getVal("source"),
+      people: Number(getVal("people")) || 1,
+      advance: Number(getVal("advance")) || 0,
+      banuakka: Number(getVal("banuakka")) || 0,
+      hotel2: Number(getVal("hotel2")) || 0,
+      adihotel: Number(getVal("adihotel")) || 0,
+      grocery: Number(getVal("grocery")) || 0,
+      commission: Number(getVal("commission")) || 0,
+      otherexpenses: Number(getVal("otherexpenses")) || 0,
+      timestamp: new Date().toISOString()
+    };
+
+    if (!expenseData.date || !expenseData.customer || !expenseData.phone) {
+      alert("Please fill required fields.");
+      return;
+    }
+
+    try {
+      await db.ref("daily_expenses").push(expenseData);
+      form.reset();
+      const msg = document.getElementById("successMessage");
+      msg.style.display = "block";
+      setTimeout(() => msg.style.display = "none", 3000);
+     
+    } catch(err) {
+      console.error(err);
+      alert("Error saving expense: " + err.message);
+    }
+  });
+
+  
+</script>
+</body>
+</html>
